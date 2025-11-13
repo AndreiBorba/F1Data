@@ -1,18 +1,36 @@
-import requests
+import requests, logging
 from datetime import datetime, timezone
+
+from utils.openf1 import OpenF1Service
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def top_5_live():
     full_message = []
 
+    race_types = [
+        'Practice 1',
+        'Practice 2',
+        'Practice 3',
+        'Qualifying',
+        'Sprint Qualifying',
+        'Sprint',
+        'Race'
+    ]
+
     now = datetime.now(timezone.utc)
     current_year = datetime.now().year
     
-    # Buscar sessões próximas à data atual
-    sessions = requests.get("https://api.openf1.org/v1/sessions", 
-                           params={'year': current_year}).json()
+    response = OpenF1Service.get_sessions_by_year(year=current_year)
 
-    # Filtrar apenas corridas
-    races = [s for s in sessions if s['session_name'] == 'Race']
+    if response.status_code != 200:
+        full_message.append(f"❌ Sem dados!")
+        return full_message
+    
+    sessions = response.json()
+
+    # Filtrando pelo tipo de corrida
+    races = [s for s in sessions if s['session_name'] in race_types]
     
     # Encontrar corrida ao vivo ou mais recente
     current_race = None
@@ -24,13 +42,13 @@ def top_5_live():
         # Se está acontecendo agora
         if date_start <= now <= date_end:
             current_race = race
-            full_message.append("🔴 CORRIDA AO VIVO!")
+            full_message.append(f"🔴 AO VIVO ({current_race.get('session_name', 'N/A')})")
             break
         
         # Se já passou, pegar a mais recente
         if now > date_end and current_race is None:
             current_race = race
-            full_message.append("✅ Última corrida (finalizada)")
+            full_message.append(f"✅ Último evento ({current_race.get('session_name', 'N/A')})")
             break
     
     if not current_race:
@@ -45,7 +63,7 @@ def top_5_live():
     circuit = current_race.get('circuit_short_name', 'N/A')
     
     full_message.append(f"📍 {location}, {country}")
-    full_message.append(f"🏁 Circuito: {circuit}")
+    full_message.append(f"🏟️ Circuito: {circuit}")
     full_message.append(f"📅 Data: {current_race.get('date_start', 'N/A')[:10]}\n")
 
     # Buscar posições
@@ -72,7 +90,7 @@ def top_5_live():
     # Top 5
     top5 = sorted(latest_pos.values(), key=lambda x: x['position'])[:5]
     
-    full_message.append("🏁 TOP 5 POSIÇÕES\n")
+    full_message.append("🏆 TOP 5 POSIÇÕES\n")
     for p in top5:
         driver = driver_dict.get(p['driver_number'], {})
         abbr = driver.get('name_acronym', '???')

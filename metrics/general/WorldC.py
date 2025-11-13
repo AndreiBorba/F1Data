@@ -46,32 +46,40 @@ def calculate_max_points_for_remaining_season():
     return sprint_points + conventional_points
 
 
-def calculate(driver_standings, max_points, driver_name):
+def calculate(driver_standings, max_points, driver_code):
     full_message = []
 
-    full_message.append(f"🏁 Chances de {driver_name} vencer o campeonato mundial:\n")
+    full_message.append(f"🏁 Chances de {driver_code} vencer o campeonato mundial:\n")
+
+    driver_found = False
 
     LEADER_POINTS = int(driver_standings.loc[0]['points'])
 
     for i, _ in enumerate(driver_standings.iterrows()):
         driver = driver_standings.loc[i]
 
-        if driver['givenName'] == driver_name:
+        if driver['driverCode'] == driver_code:
             driver_max_points = int(driver["points"]) + max_points
             can_win = 'Não' if driver_max_points < LEADER_POINTS else 'Sim'
+
+            driver_found = True
 
             full_message.append(f"*{driver['position']}º - {driver['givenName'] + ' ' + driver['familyName']}*\n"
                 f"Pontos atuais: {driver['points']}\n"
                 f"Máximo de pontos: {driver_max_points}\n"
                 f"Tem chance: {can_win}")
-            
+
             break
+    
+    if not driver_found:
+        full_message = []
+        full_message.append(f"❌ Piloto {driver_code} não encontrado!")
     
     return '\n'.join(full_message)
         
 
-def calculate_if_max_can_win():
+def driver_chances_of_winning(driver_code):
     driver_standings = get_drivers_standings()
     points = calculate_max_points_for_remaining_season()
 
-    return calculate(driver_standings, points, 'Max')
+    return calculate(driver_standings, points, driver_code)

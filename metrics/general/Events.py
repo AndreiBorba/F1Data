@@ -11,10 +11,9 @@ def get_remaining_events():
 
     data_ergast = fastf1.get_events_remaining(dt=datetime.now(), include_testing=False, backend='ergast')
     if not data_ergast.empty:
-        print(f"usando data_ergast\n")
         return format_events(full_message, data_ergast)
 
-    return
+    return f"❌ Sem dados das próximas corridas!"
 
 
 def format_events(full_message, data):
